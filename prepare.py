@@ -190,7 +190,7 @@ def remove_problematic_pcr_week(df):
 ########################################################
 
 
-def set_columns(df, bloodtype_to_binary):
+def set_columns(df, training_data, bloodtype_to_binary):
     """
     Make new columns with relevant data from the existing columns, and covert data into more convenient formats to work
     with
@@ -207,7 +207,7 @@ def set_columns(df, bloodtype_to_binary):
     # each column is its own symptom. 1 signifies that the subject has the symptom, 0 that the
     # subject doesn't have it
 
-    symptoms_lists = df["symptoms"].str.split(';').dropna()
+    symptoms_lists = training_data["symptoms"].str.split(';').dropna()
     symptom_vector = [symptom for symptoms in symptoms_lists for symptom in symptoms]
     symptoms_list = list(set(symptom_vector))
 
@@ -317,7 +317,8 @@ def normalize(df):
     return df
 
 
-def prepare_data(data, training_data, normalize_columns=1, remove_targets=1, bloodtype_to_binary=True):
+def prepare_data(data, training_data, normalize_columns=1,
+                 bloodtype_to_binary=True):
     # Generate random seed to replicate results
     np.random.seed(11)
 
@@ -326,8 +327,8 @@ def prepare_data(data, training_data, normalize_columns=1, remove_targets=1, blo
     t = training_data.copy()
 
     # Part 1 - Prepare columns to manage the analysis operations
-    d = set_columns(d, bloodtype_to_binary)
-    t = set_columns(t, bloodtype_to_binary)
+    d = set_columns(d, training_data, bloodtype_to_binary)
+    t = set_columns(t, training_data, bloodtype_to_binary)
 
     # Part 2 - Clean outliers from the data
     d, t = clean_outliers(d, t)
@@ -335,11 +336,16 @@ def prepare_data(data, training_data, normalize_columns=1, remove_targets=1, blo
     # Part 3 - Impute missing data
     d = impute_data(d)
 
+    remove_target = False
+
     # Separate target features from data
-    target_features = pd.Series(d["VirusScore"])
+    target_features = None
+    if "VirusScore" in d.columns:
+        target_features = pd.Series(d["VirusScore"])
+        remove_target = True
 
     # Part 4 - Remove Unnecessary features
-    d = remove_unnecessary_features(d, remove_targets)
+    d = remove_unnecessary_features(d, remove_target)
 
     d = normalize(d) if normalize_columns == 1 else d
 
